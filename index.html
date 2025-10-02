@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Critical Listening: TTS Integrated Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Ticks/Crosses -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4; /* Light Green Background */
+        }
+        /* Required 32px Bold Font for Score */
+        .score-display {
+            font-size: 32px;
+            font-weight: 900;
+        }
+        .section-header {
+            border-left: 6px solid #14b8a6; /* Teal border */
+        }
+        .quiz-card {
+            max-width: 4xl;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Styling for radio/checkbox inputs (MC and T/F) */
+        input[type="radio"]:checked + label,
+        input[type="checkbox"]:checked + label {
+            border-color: #0d9488; /* Darker Teal */
+            background-color: #ccfbf1; /* Light Cyan */
+            color: #0f766e; /* Dark Teal Text */
+            box-shadow: 0 0 0 2px #0d9488;
+        }
+        .correct-label {
+            background-color: #d1fae5 !important; /* Green 100 */
+            border-color: #34d399 !important; /* Green 400 */
+            color: #065f46 !important; /* Dark Green Text */
+        }
+        .incorrect-label {
+            background-color: #fee2e2 !important; /* Red 100 */
+            border-color: #f87171 !important; /* Red 400 */
+            color: #991b1b !important; /* Dark Red Text */
+        }
+        .audio-player-container {
+            min-height: 50px;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #14b8a6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="quiz-card space-y-8">
+
+        <!-- Header and Score Display -->
+        <header class="text-center mb-8 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800">Critical Listening: Correction Practice Quiz (25 Marks)</h1>
+            <p class="text-gray-500 mt-1">
+                **TTS Integrated Mode:** Press the "Generate & Play Audio" button below each segment to hear the script.
+                Listen closely for when the speaker **corrects** himself. The correct answer is always the final information given.
+            </p>
+            <div id="score-container" class="mt-4 p-4 bg-teal-50 rounded-xl hidden border-2 border-teal-200">
+                <span id="score-text" class="text-teal-700 score-display">
+                    0 / 25
+                </span>
+            </div>
+        </header>
+
+        <!-- TTS AUDIO GENERATION SECTION -->
+        <div class="p-6 bg-cyan-100 border border-cyan-300 rounded-xl space-y-4 shadow-inner">
+            <h2 class="text-xl font-bold text-teal-700"><i class="fa-solid fa-wand-magic-sparkles mr-2"></i> TTS Audio Generation</h2>
+            <p class="text-sm text-gray-600 font-semibold">The audio for each segment will be generated on demand using a high-quality TTS engine (Voice: Zephyr).</p>
+        </div>
+
+
+        <!-- TRANSCRIPT DISPLAY -->
+        <div class="p-6 bg-gray-100 border border-gray-300 rounded-xl space-y-3">
+            <button type="button" onclick="toggleTranscript()" id="transcript-toggle-btn" class="px-4 py-2 bg-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-400 transition duration-150">
+                <i class="fa-solid fa-book-open-reader mr-2"></i> Show Expected Transcript (Instructor Key)
+            </button>
+            <div id="transcript-content" class="text-sm text-gray-700 mt-4 p-4 border border-gray-200 bg-white rounded-lg hidden">
+                <h3 class="font-bold mb-2 text-lg text-teal-700">Audio Segments (Text-to-Speech Script)</h3>
+                <p class="mb-4">The audio generated will follow this script precisely. The final, corrected answer for each question is in **bold**.</p>
+                
+                <hr class="my-3">
+                
+                <div class="mb-5 p-3 bg-gray-50 rounded-lg border">
+                    <h4 class="font-semibold text-teal-700 mb-2">Segment 1 (Q1-6):</h4>
+                    <p id="transcript-1" class="mb-3 whitespace-pre-wrap"></p>
+                    <div id="audio-container-1" class="flex items-center space-x-3 mt-3">
+                        <button onclick="generateAndPlay(1)" id="generate-btn-1" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition duration-150 font-medium"><i class="fa-solid fa-play mr-2"></i> Generate & Play Audio</button>
+                        <div id="loading-1" class="loading-spinner hidden"></div>
+                        <audio controls id="audio-player-1" class="w-1/2 rounded-md shadow-lg" style="display: none;"></audio>
+                    </div>
+                </div>
+
+                <div class="mb-5 p-3 bg-gray-50 rounded-lg border">
+                    <h4 class="font-semibold text-teal-700 mb-2">Segment 2 (Q7-13):</h4>
+                    <p id="transcript-2" class="mb-3 whitespace-pre-wrap"></p>
+                    <div id="audio-container-2" class="flex items-center space-x-3 mt-3">
+                        <button onclick="generateAndPlay(2)" id="generate-btn-2" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition duration-150 font-medium"><i class="fa-solid fa-play mr-2"></i> Generate & Play Audio</button>
+                        <div id="loading-2" class="loading-spinner hidden"></div>
+                        <audio controls id="audio-player-2" class="w-1/2 rounded-md shadow-lg" style="display: none;"></audio>
+                    </div>
+                </div>
+                
+                <div class="mb-5 p-3 bg-gray-50 rounded-lg border">
+                    <h4 class="font-semibold text-teal-700 mb-2">Segment 3 (Q14-19):</h4>
+                    <p id="transcript-3" class="mb-3 whitespace-pre-wrap"></p>
+                    <div id="audio-container-3" class="flex items-center space-x-3 mt-3">
+                        <button onclick="generateAndPlay(3)" id="generate-btn-3" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition duration-150 font-medium"><i class="fa-solid fa-play mr-2"></i> Generate & Play Audio</button>
+                        <div id="loading-3" class="loading-spinner hidden"></div>
+                        <audio controls id="audio-player-3" class="w-1/2 rounded-md shadow-lg" style="display: none;"></audio>
+                    </div>
+                </div>
+
+                <div class="mb-5 p-3 bg-gray-50 rounded-lg border">
+                    <h4 class="font-semibold text-teal-700 mb-2">Segment 4 (Q20-25):</h4>
+                    <p id="transcript-4" class="mb-3 whitespace-pre-wrap"></p>
+                    <div id="audio-container-4" class="flex items-center space-x-3 mt-3">
+                        <button onclick="generateAndPlay(4)" id="generate-btn-4" class="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition duration-150 font-medium"><i class="fa-solid fa-play mr-2"></i> Generate & Play Audio</button>
+                        <div id="loading-4" class="loading-spinner hidden"></div>
+                        <audio controls id="audio-player-4" class="w-1/2 rounded-md shadow-lg" style="display: none;"></audio>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <form id="listening-quiz-form" class="space-y-10">
+            <!-- Sections remain the same, questions will be inserted by JS -->
+
+            <div id="section-1" class="section-container">
+                <div class="section-header px-4 py-2 bg-gray-50 rounded-r-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">Part 1: Days, Dates, and Time (Days & Time)</h2>
+                    <p class="text-sm text-gray-500">Listen to the first segment and choose the final, corrected information. (Questions 1-6)</p>
+                </div>
+            </div>
+
+            <div id="section-2" class="section-container">
+                <div class="section-header px-4 py-2 bg-gray-50 rounded-r-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">Part 2: Numbers, Costs, and Units (Measurements & Count)</h2>
+                    <p class="text-sm text-gray-500">Listen to the second segment and choose the correct number or unit. (Questions 7-13)</p>
+                </div>
+            </div>
+
+            <div id="section-3" class="section-container">
+                <div class="section-header px-4 py-2 bg-gray-50 rounded-r-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">Part 3: People and Places (Nationality & Country)</h2>
+                    <p class="text-sm text-gray-500">Listen to the third segment and choose the final, correct country or nationality. (Questions 14-19)</p>
+                </div>
+            </div>
+            
+            <div id="section-4" class="section-container">
+                <div class="section-header px-4 py-2 bg-gray-50 rounded-r-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700">Part 4: Months and Years (Timeline)</h2>
+                    <p class="text-sm text-gray-500">Listen to the fourth segment and choose the correct month or year. (Questions 20-25)</p>
+                </div>
+            </div>
+
+
+            <!-- Submission Button -->
+            <div class="flex justify-center pt-8">
+                <button type="submit" id="submit-button" class="px-8 py-3 bg-teal-600 text-white font-bold text-lg rounded-full shadow-lg hover:bg-teal-700 transition duration-300 transform hover:scale-105">
+                    Submit Answers (Get Your Score)
+                </button>
+            </div>
+        </form>
+
+    </div>
+
+    <script>
+        
+        // --- TRANSCRIPT DATA (The content the user must match with their external audio) ---
+        const transcriptSections = {
+            1: "Good morning. Let's confirm the schedule. Our first meeting was set for Monday, but due to a late flight, no, scratch that. It will now be held on **Tuesday**. The initial registration deadline was the 5th of November, but management decided to extend it to the **15th of November**. The final check-out time is 11 a.m. No, wait, that's only for the ground floor. For our group, the correct time is **12 noon**. The main presentation practice runs from 9 o'clock until 1 p.m., but actually, we need more time, so let's adjust that to **3 p.m.** The first day of class will be next week, which I thought was Wednesday. Checking my notes... no, it's actually **Thursday**. Finally, remember that the special event always takes place on a **Saturday**, not Friday as some people think. We must be accurate on this.",
+            2: "I'm looking at the budget proposal now. The travel allowance for one week is 400 Omani rials. Ah, that's incorrect. I see the new approved figure is **450 rials**. The maximum acceptable weight for the checked bag is 20 kilograms, no, it's actually **23 kilograms** for international flights. The height of the new display monitor is 60 centimeters. I apologize, that measurement is wrong; the correct height is **65 centimeters**. Our new building uses 1,500 liters of water a day. Let me double-check that. It's actually **1,700 liters** because of the garden. The initial investment was 1 million USD, which I see was revised up. The actual figure is **1.2 million USD**. The length of the fence is 200 meters. My mistake, it's a smaller area, so the length is only **180 meters**. We have 10 employees, no, wait, 11... Ah, I forgot to add the new intern, so the total count is **12** people.",
+            3: "Welcome to the team. Let me introduce our international staff. Our senior programmer, Mark, is from the country of **Australia**. I know I said New Zealand yesterday, but he corrected me. Jane is working with us, she is an **American**. Not Canadian, but American. She speaks fluent French, as she lived in France for ten years. Our new business partner, Mr. Chen, is from **China**, not Korea, as some of you think. We will be opening a new branch in **Germany**. Initially, we planned for Spain, but Germany offered a better location. I am **Omani**, of course, working here in Muscat. Our biggest competitor, however, is a large **Indian** company, not Pakistani. Our team is truly international.",
+            4: "Let’s look at the project timeline. The first phase officially launched in January. Wait, I see the official documents here—it was **February** of this year. Our company celebrated its tenth anniversary in the year 2015. That’s definitely wrong; we hit ten years in **2017**. The next scheduled holiday is in November. No, the official calendar shows it in **October**. The total training period will end in the year 2024. Let me be precise: the training ends in **2025**. The results of the internal audit will be published in April. Oh dear, I've mixed up my dates; it will actually be published in **May**. The contract renewal is due next month, which is August. Checking the final date, it's actually due in **September**."
+        };
+
+        const API_KEY = ""; // Placeholder for the actual API key
+        const TTS_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=" + API_KEY;
+        const TTS_VOICE = "Zephyr"; // A clear, native-sounding voice (Bright)
+
+        // --- UTILITY FUNCTIONS FOR PCM TO WAV CONVERSION ---
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate = 24000) {
+            const pcmLength = pcm16.length * 2; // Length in bytes
+            const buffer = new ArrayBuffer(44 + pcmLength);
+            const view = new DataView(buffer);
+
+            let offset = 0;
+
+            // RIFF chunk descriptor
+            writeString(view, offset, 'RIFF'); offset += 4;
+            view.setUint32(offset, 36 + pcmLength, true); offset += 4; // ChunkSize
+            writeString(view, offset, 'WAVE'); offset += 4;
+
+            // FMT sub-chunk
+            writeString(view, offset, 'fmt '); offset += 4;
+            view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size
+            view.setUint16(offset, 1, true); offset += 2; // AudioFormat (1 for PCM)
+            view.setUint16(offset, 1, true); offset += 2; // NumChannels (1)
+            view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
+            view.setUint32(offset, sampleRate * 2, true); offset += 4; // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+            view.setUint16(offset, 2, true); offset += 2; // BlockAlign (NumChannels * BitsPerSample/8)
+            view.setUint16(offset, 16, true); offset += 2; // BitsPerSample (16)
+
+            // DATA sub-chunk
+            writeString(view, offset, 'data'); offset += 4;
+            view.setUint32(offset, pcmLength, true); offset += 4; // Subchunk2Size
+
+            // Write the PCM data
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(offset, pcm16[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // --- CORE TTS GENERATION LOGIC ---
+
+        // Map to store generated audio URLs to avoid re-generating
+        const audioCache = {};
+
+        async function generateAndPlay(segmentId) {
+            const audioPlayer = document.getElementById(`audio-player-${segmentId}`);
+            const loadingIndicator = document.getElementById(`loading-${segmentId}`);
+            const generateButton = document.getElementById(`generate-btn-${segmentId}`);
+            const text = transcriptSections[segmentId];
+            
+            // 1. Check Cache
+            if (audioCache[segmentId]) {
+                audioPlayer.src = audioCache[segmentId];
+                audioPlayer.play();
+                return;
+            }
+
+            // 2. Set Loading State
+            generateButton.disabled = true;
+            generateButton.innerHTML = 'Generating...';
+            loadingIndicator.classList.remove('hidden');
+            audioPlayer.style.display = 'none';
+
+            try {
+                // 3. API Payload
+                const payload = {
+                    contents: [{
+                        parts: [{ text: text }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: TTS_VOICE }
+                            }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+
+                let response;
+                let lastDelay = 1000;
+                let maxRetries = 3;
+
+                // Implement exponential backoff for API call
+                for (let i = 0; i < maxRetries; i++) {
+                    response = await fetch(TTS_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        break; // Success
+                    } else if (response.status === 429 && i < maxRetries - 1) {
+                        // Rate limit error, retry after delay
+                        await new Promise(resolve => setTimeout(resolve, lastDelay));
+                        lastDelay *= 2; // Exponential backoff
+                    } else {
+                        throw new Error(`API request failed with status ${response.status}`);
+                    }
+                }
+                
+                if (!response.ok) {
+                    throw new Error("Failed to fetch audio after all retries.");
+                }
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (!audioData || !mimeType || !mimeType.startsWith("audio/L16")) {
+                    console.error("Invalid TTS response format or missing audio data.", result);
+                    throw new Error("Failed to generate audio content.");
+                }
+                
+                // 4. Convert PCM to WAV and create URL
+                const pcmData = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmData);
+                
+                // TTS API returns 24000 Hz sample rate
+                const sampleRate = 24000; 
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                const audioUrl = URL.createObjectURL(wavBlob);
+                
+                // 5. Play and Cache
+                audioCache[segmentId] = audioUrl;
+                audioPlayer.src = audioUrl;
+                audioPlayer.style.display = 'block';
+                audioPlayer.play();
+
+            } catch (error) {
+                console.error("Error generating audio:", error);
+                alert("Error generating audio. Check the console for details.");
+            } finally {
+                // 6. Reset State
+                generateButton.disabled = false;
+                generateButton.innerHTML = '<i class="fa-solid fa-play mr-2"></i> Generate & Play Audio';
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+        
+        function toggleTranscript() {
+            const content = document.getElementById('transcript-content');
+            const button = document.getElementById('transcript-toggle-btn');
+            const isHidden = content.classList.contains('hidden');
+
+            if (isHidden) {
+                content.classList.remove('hidden');
+                button.innerHTML = '<i class="fa-solid fa-book-open-reader mr-2"></i> Hide Expected Transcript (Instructor Key)';
+            } else {
+                content.classList.add('hidden');
+                button.innerHTML = '<i class="fa-solid fa-book-open-reader mr-2"></i> Show Expected Transcript (Instructor Key)';
+            }
+        }
+
+        // Helper function to fill the transcript display
+        const fillTranscriptDisplay = () => {
+            document.getElementById('transcript-1').textContent = transcriptSections[1];
+            document.getElementById('transcript-2').textContent = transcriptSections[2];
+            document.getElementById('transcript-3').textContent = transcriptSections[3];
+            document.getElementById('transcript-4').textContent = transcriptSections[4];
+        }
+
+
+        // --- Quiz Data Structure (25 Questions) ---
+        const questionsData = [
+            // Part 1: Days, Dates, and Time (6 Questions)
+            { id: 1, type: 'fitb', text: "The first meeting will be held on **[Day of Week]**.", answer: 'Tuesday', section: 1, hint: 'Day (e.g., Monday)' },
+            { id: 2, type: 'fitb', text: "The final registration deadline is the **[Date and Month]**.", answer: '15th of November', section: 1, hint: 'Date (e.g., Nov 15)' },
+            { id: 3, type: 'mc', text: "The correct check-out time for the group is:", answer: '12 noon', section: 1, options: ['11 a.m.', '12 noon', '1 p.m.'] },
+            { id: 4, type: 'fitb', text: "The presentation practice will run until **[Time]**.", answer: '3 p.m.', section: 1, hint: 'Time (e.g., 2 p.m.)' },
+            { id: 5, type: 'fitb', text: "The first day of class will be on **[Day of Week]**.", answer: 'Thursday', section: 1, hint: 'Day (e.g., Wednesday)' },
+            { id: 6, type: 'tf', text: "The special event always takes place on a Friday.", answer: 'False', section: 1, hint: 'True/False' },
+            
+            // Part 2: Numbers, Costs, and Units (7 Questions)
+            { id: 7, type: 'fitb', text: "The approved travel allowance is **[Number]** Omani rials.", answer: '450', section: 2, hint: 'Number' },
+            { id: 8, type: 'fitb', text: "The maximum acceptable weight for the checked bag is **[Number]** kilograms.", answer: '23', section: 2, hint: 'Number' },
+            { id: 9, type: 'fitb', text: "The correct height of the display monitor is **[Number]** centimeters.", answer: '65', section: 2, hint: 'Number' },
+            { id: 10, type: 'fitb', text: "The new building uses **[Number]** liters of water a day.", answer: '1700', section: 2, hint: 'Number' },
+            { id: 11, type: 'mc', text: "What is the final figure for the initial investment?", answer: '1.2 million USD', section: 2, options: ['1 million USD', '1.2 million USD', '1.5 million USD'] },
+            { id: 12, type: 'fitb', text: "The final length of the fence is **[Number]** meters.", answer: '180', section: 2, hint: 'Number' },
+            { id: 13, type: 'fitb', text: "The total number of people on the team is **[Number]**.", answer: '12', section: 2, hint: 'Number' },
+
+            // Part 3: People and Places (6 Questions)
+            { id: 14, type: 'fitb', text: "Mark, the senior programmer, is from **[Country]**.", answer: 'Australia', section: 3, hint: 'Country Name' },
+            { id: 15, type: 'fitb', text: "Jane is an **[Nationality]** working with the team.", answer: 'American', section: 3, hint: 'Nationality' },
+            { id: 16, type: 'fitb', text: "Mr. Chen, the business partner, is from **[Country]**.", answer: 'China', section: 3, hint: 'Country Name' },
+            { id: 17, type: 'mc', text: "Where will the company open a new branch?", answer: 'Germany', section: 3, options: ['Spain', 'France', 'Germany'] },
+            { id: 18, type: 'fitb', text: "The speaker confirms his own nationality is **[Nationality]**.", answer: 'Omani', section: 3, hint: 'Nationality' },
+            { id: 19, type: 'fitb', text: "The company's biggest competitor is an **[Nationality]** company.", answer: 'Indian', section: 3, hint: 'Nationality' },
+
+            // Part 4: Months and Years (6 Questions)
+            { id: 20, type: 'fitb', text: "The first phase officially launched in **[Month]**.", answer: 'February', section: 4, hint: 'Month Name' },
+            { id: 21, type: 'fitb', text: "The company celebrated its tenth anniversary in the year **[Year]**.", answer: '2017', section: 4, hint: 'Year' },
+            { id: 22, type: 'fitb', text: "The next scheduled holiday is in **[Month]**.", answer: 'October', section: 4, hint: 'Month Name' },
+            { id: 23, type: 'fitb', text: "The total training period will end in the year **[Year]**.", answer: '2025', section: 4, hint: 'Year' },
+            { id: 24, type: 'mc', text: "In which month will the results of the internal audit be published?", answer: 'May', section: 4, options: ['April', 'May', 'June'] },
+            { id: 25, type: 'fitb', text: "The contract renewal is actually due in **[Month]**.", answer: 'September', section: 4, hint: 'Month Name' },
+        ];
+
+
+        const form = document.getElementById('listening-quiz-form');
+        const scoreContainer = document.getElementById('score-container');
+        const scoreText = document.getElementById('score-text');
+        const submitButton = document.getElementById('submit-button');
+        const totalQuestions = questionsData.length;
+        let isSubmitted = false;
+
+
+        // Utility to normalize answers (case-insensitive, ignores extra spaces and symbols like commas, periods, etc.)
+        const normalizeAnswer = (answer) => {
+            if (answer === null || answer === undefined) return '';
+            // Lowercase, remove all non-alphanumeric characters (except spaces) for flexible matching
+            let normalized = String(answer).toLowerCase().replace(/[^a-z0-9\s]+/g, ''); 
+            return normalized.trim();
+        };
+        
+        // Function to create the HTML for a single question
+        const createQuestionElement = (q) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.id = `q-${q.id}`;
+            questionDiv.className = 'p-4 border border-gray-200 rounded-lg mb-4 bg-white shadow-md transition duration-150';
+
+            const displayQuestionText = q.text.replace(/\[[^\]]+\]/g, '_______');
+
+            let inputHtml = '';
+            
+            if (q.type === 'tf') {
+                inputHtml = `
+                    <div class="flex space-x-6 mt-3">
+                        <input type="radio" id="q${q.id}-t" name="answer-${q.id}" value="True" class="hidden">
+                        <label for="q${q.id}-t" class="cursor-pointer px-5 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded-full transition duration-150 hover:border-teal-500">True</label>
+                        <input type="radio" id="q${q.id}-f" name="answer-${q.id}" value="False" class="hidden">
+                        <label for="q${q.id}-f" class="cursor-pointer px-5 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded-full transition duration-150 hover:border-teal-500">False</label>
+                    </div>
+                `;
+            } else if (q.type === 'mc') {
+                 inputHtml = `<div class="flex flex-col space-y-2 mt-3">`;
+                 q.options.forEach((option, index) => {
+                    const optionId = `q${q.id}-mc-${index}`;
+                    inputHtml += `
+                        <input type="radio" id="${optionId}" name="answer-${q.id}" value="${option}" class="hidden">
+                        <label for="${optionId}" class="cursor-pointer px-4 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded-lg transition duration-150 hover:border-teal-500">${option}</label>
+                    `;
+                 });
+                 inputHtml += `</div>`;
+
+            } else { // FITB and Short Answer
+                inputHtml = `
+                    <input type="text" name="answer-${q.id}" class="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500 text-sm" placeholder="Write your answer here (e.g., ${q.hint})">
+                `;
+            }
+
+            questionDiv.innerHTML = `
+                <div class="flex items-start">
+                    <span class="font-bold text-lg text-teal-600 mr-3">${q.id}.</span>
+                    <div class="flex-grow">
+                        <p class="text-gray-800 font-medium mb-2">${displayQuestionText}</p>
+                        ${inputHtml}
+                    </div>
+                    <span id="feedback-${q.id}" class="text-xl ml-4 pt-1 opacity-0 transition duration-300" style="min-width: 25px;"></span>
+                </div>
+                <p id="correct-answer-${q.id}" class="text-sm italic mt-2 hidden"></p>
+            `;
+
+            return questionDiv;
+        };
+
+        // Function to render all questions into the form
+        const renderQuestions = () => {
+            questionsData.forEach(q => {
+                const sectionContainer = document.getElementById(`section-${q.section}`);
+                if (sectionContainer) {
+                    sectionContainer.appendChild(createQuestionElement(q));
+                }
+            });
+        };
+
+        // Grading logic
+        const checkAnswers = (event) => {
+            event.preventDefault();
+            if (isSubmitted) return; 
+
+            let correctCount = 0;
+
+            questionsData.forEach(q => {
+                const questionElement = document.getElementById(`q-${q.id}`);
+                const feedbackSpan = document.getElementById(`feedback-${q.id}`);
+                const correctAnswerP = document.getElementById(`correct-answer-${q.id}`);
+
+                let userAnswer = null;
+                const inputName = `answer-${q.id}`;
+
+                if (q.type === 'tf' || q.type === 'mc') {
+                    const selectedInput = form.querySelector(`input[name="${inputName}"]:checked`);
+                    userAnswer = selectedInput ? selectedInput.value : null;
+                } else { // FITB and Short Answer
+                    const textInput = form.querySelector(`input[name="${inputName}"]`);
+                    userAnswer = textInput ? textInput.value : null;
+                }
+
+                const isAnswered = userAnswer !== null && userAnswer.trim() !== '';
+                
+                const normalizedUserAnswer = normalizeAnswer(userAnswer);
+                const normalizedCorrectAnswer = normalizeAnswer(q.answer);
+                
+                // Compare the normalized answers (non-case sensitive)
+                const isCorrect = isAnswered && normalizedUserAnswer === normalizedCorrectAnswer;
+
+                // 1. Update Score and Feedback
+                if (isCorrect) {
+                    correctCount++;
+                    feedbackSpan.innerHTML = '<i class="fa-solid fa-check text-green-600"></i>'; 
+                } else {
+                    feedbackSpan.innerHTML = '<i class="fa-solid fa-xmark text-red-600"></i>'; 
+                }
+
+                // 2. Show correct answer (if wrong or if they skipped)
+                if (!isCorrect) {
+                    correctAnswerP.innerHTML = `<strong>Correct Answer:</strong> ${q.answer}`;
+                    correctAnswerP.classList.remove('hidden');
+                    correctAnswerP.classList.add('text-red-500');
+                } else {
+                    correctAnswerP.classList.add('hidden');
+                }
+
+                // 3. Highlight the user's selected/entered answer and disable inputs
+                const inputs = questionElement.querySelectorAll('input');
+                inputs.forEach(input => input.disabled = true);
+
+                if (userAnswer !== null && isAnswered) {
+                    if (q.type === 'tf' || q.type === 'mc') {
+                        const selectedInput = form.querySelector(`input[name="${inputName}"][value="${userAnswer}"]`);
+                        if (selectedInput) {
+                            const label = selectedInput.nextElementSibling;
+                            if (label) {
+                                // Highlight the user's selection
+                                label.classList.add(isCorrect ? 'correct-label' : 'incorrect-label', 'border-4', 'font-extrabold');
+                                label.classList.remove('border-gray-300', 'hover:border-teal-500');
+                            }
+                        }
+                    } else { // FITB
+                        const textInput = form.querySelector(`input[name="${inputName}"]`);
+                        if (textInput) {
+                            textInput.classList.add(isCorrect ? 'bg-green-50' : 'bg-red-50', isCorrect ? 'border-green-500' : 'border-red-500');
+                            textInput.classList.remove('focus:ring-teal-500', 'focus:border-teal-500');
+                        }
+                    }
+                }
+
+                // Ensure the correct multiple-choice option is marked if the user was wrong
+                if ((q.type === 'mc' || q.type === 'tf') && !isCorrect) {
+                    const correctOptionInput = form.querySelector(`input[name="${inputName}"][value="${q.answer}"]`);
+                    if (correctOptionInput) {
+                        const label = correctOptionInput.nextElementSibling;
+                        if (label) {
+                             // Temporarily add a distinct border to show the true correct answer
+                            label.classList.add('border-green-500', 'border-2', 'bg-green-100');
+                        }
+                    }
+                }
+
+                feedbackSpan.classList.remove('opacity-0');
+            });
+
+            // 5. Update global score with required style
+            scoreText.textContent = `${correctCount} / ${totalQuestions}`;
+            scoreContainer.classList.remove('hidden');
+
+            // 6. Final UI changes
+            submitButton.disabled = true;
+            submitButton.textContent = 'Results Shown - Review Your Answers';
+            submitButton.classList.remove('bg-teal-600', 'hover:bg-teal-700', 'transform', 'hover:scale-105');
+            submitButton.classList.add('bg-gray-400');
+            isSubmitted = true;
+        };
+
+        // Initialize the quiz
+        window.onload = () => {
+            renderQuestions();
+            fillTranscriptDisplay();
+            form.addEventListener('submit', checkAnswers);
+            
+            // Update initial score display
+            scoreText.textContent = `0 / ${totalQuestions}`;
+            
+            console.log("Critical Listening Quiz (TTS Integrated) loaded. Audio can be generated on demand.");
+        };
+    </script>
+
+</body>
+</html>
